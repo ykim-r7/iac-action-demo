@@ -28,7 +28,7 @@ jobs:
         with:
           api_key: ${{ secrets.api_key }}
           base_url: ${{ secrets.base_url }}
-          config_name: Storage Container Without Server Side Encryption Enabled
+          config_name: AWS CIS Benchmark 1.4
           scan_name: Demo Scan
           targets: example.yml
       - name: Upload SARIF file
