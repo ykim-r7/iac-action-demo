@@ -16,11 +16,7 @@ jobs:
       - id: changed-files
         uses: tj-actions/changed-files@v19
 
-      # - id: split-files
-      #   run: echo ::set-output name=targets::$(echo ${{ steps.changed-files.outputs.all_changed_and_modified_files }} | awk -F' ' '{print "[\""$1 "\", \"" $2"\"]"}')
-
-
-  mimcs-scan:
+  mimics-scan:
     name: Scan and Upload
     needs: get-targets
     runs-on: ubuntu-latest
