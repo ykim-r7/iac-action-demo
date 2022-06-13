@@ -1,0 +1,154 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: "A poorly architected template to use for demos"
+
+Mappings:
+  RegionMap:
+    us-east-1:
+      AMI: "ami-01234567890abcdef"
+    us-east-2:
+      AMI: "ami-abcdef01234567890"
+
+Parameters:
+  AppPublicSubnet:
+    Type: String
+    Default: subnet-01234567890abcdef
+    Description: The subnet to deploy the App into
+
+  AppVPC:
+    Type: String
+    Default: vpc-01234567890abcdef
+    Description: The vpc to deploy the App into
+
+  AppLoggingBucket:
+    Type: String
+    Default: CommonLoggingBucket
+    Description: The the s3 bucket used for logging
+
+  DBInstanceClass:
+    Type: String
+    Default: db.m5.large
+    Description: The the instance class to use
+
+Resources:
+  AppInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      IamInstanceProfile: !Ref AppInstanceProfile
+      ImageId:
+        Fn::FindInMap:
+          - RegionMap
+          - !Ref AWS::Region
+          - AMI
+      InstanceType: m1.small
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: "0"
+          GroupSet:
+            - !Ref AppSecurityGroup
+          SubnetId: !Ref AppPublicSubnet
+
+  AppInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /
+      Roles:
+        - !Ref AppRole
+
+  AppRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - sts:AssumeRole
+        Path: /
+
+  AppPolicies:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: root
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: "*"
+            Resource: "*"
+      Roles:
+        - !Ref AppRole
+
+  AppSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for App
+      VpcId: !Ref AppVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 3306
+          CidrIp: 0.0.0.0/0
+
+  AppKey:
+    Type: "AWS::KMS::Key"
+    Properties:
+      Description: An example symmetric KMS key
+      EnableKeyRotation: false
+      KeyPolicy:
+        Version: 2012-10-17
+        Statement:
+          Sid: Grant Key Access
+          Effect: Allow
+          Principal: "*"
+          Action: kms:*
+          Resource: "*"
+
+  AppBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      AccessControl: Private
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration:
+        Status: Enabled
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LoggingConfiguration:
+        DestinationBucketName: !Ref AppLoggingBucket
+        LogFilePrefix: AppBucketAccessLogs
+
+  AppBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref AppBucket
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action:
+              - s3:PutObject
+            Effect: Deny
+            Resource:
+              - !Sub "${AppBucket.Arn}/*"
+            Principal: "*"
+            Condition:
+              "Null":
+                "s3:x-amz-server-side-encryption": "true"
+
+  AppDB:
+    Type: "AWS::RDS::DBInstance"
+    Properties:
+      DBInstanceClass: !Ref DBInstanceClass
+      Engine: mysql
+      VPCSecurityGroups:
+        - !Ref AppSecurityGroup
