@@ -1,6 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
 
-
 Description: "A poorly architected template to use for demos"
 
 Mappings:
@@ -8,7 +7,7 @@ Mappings:
     us-east-1:
       AMI: "ami-01234567890abcdef"
     us-east-2:
-      AMI: "ami-abcdef01234567890"
+      AMI: "ami-abcdef01234567899"
 
 Parameters:
   AppPublicSubnet:
