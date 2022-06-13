@@ -1,5 +1,6 @@
 AWSTemplateFormatVersion: 2010-09-09
 
+
 Description: "A poorly architected template to use for demos"
 
 Mappings:
